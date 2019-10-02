@@ -42,15 +42,24 @@ def predict_image(model, image_path, output_path, label, data_transform, data_lo
     # print(top_p, top_class)
     # _, index = torch.max(output.data, 1)
     # index = output.data.cpu().numpy().argmax()
-    if class_name[top_class.item()] == '1bag' and image_path.name not in label:
-        print("TRUE: guessed:", str(class_name[top_class.item()]), "label:", str(label))
-    elif class_name[top_class.item()] == '2bags' and image_path.name in label:
-        print("TRUE: guessed:", str(class_name[top_class.item()]), "label:", str(label))
-    else:
-        shutil.copyfile(str(image_path), str(Path(output_path, image_path.name)))
-        Path(output_dir, "loaded")
-        print("FALSE: guessed:", str(class_name[top_class.item()]), "label:", str(label), str(image_path))
-    return top_class.item()
+    real_label = ""
+    if class_name[top_class.item()] == '1bag':
+        if image_path.name not in label:
+            # print("TRUE: guessed:", str(class_name[top_class.item()]), "label:", str(label))
+            real_label = "1bag"
+        else:
+            shutil.copyfile(str(image_path), str(Path(output_path, "1bag", image_path.name)))
+            real_label = "2bags"
+            # print("FALSE: guessed:", str(class_name[top_class.item()]), "label:", str(label), str(image_path))
+    elif class_name[top_class.item()] == '2bags':
+        if image_path.name in label:
+            # print("TRUE: guessed:", str(class_name[top_class.item()]), "label:", str(label))
+            real_label = "2bags"
+        else:
+            shutil.copyfile(str(image_path), str(Path(output_path, "2bags", image_path.name)))
+            real_label = "1bag"
+            # print("FALSE: guessed:", str(class_name[top_class.item()]), "label:", str(label), str(image_path))
+    return class_name[top_class.item()], real_label
 
 
 def load_model_data(PATH):
@@ -168,15 +177,30 @@ if __name__ == '__main__':
     #         predict_image(model_ft, img_path, output_dir, str(folder.stem), data_transform, class_name)
 
     # Hacking:
+    onebag_dir = Path(output_dir, "1bag")
+    if onebag_dir.exists():
+        onebag_dir.rmdir()
+    onebag_dir.mkdir(parents=True)
+
+    twobags_dir = Path(output_dir, "2bags")
+    if twobags_dir.exists():
+        twobags_dir.rmdir()
+    twobags_dir.mkdir(parents=True)
+
     twobags = []
     class_name = ['1bag', '2bags']
     data_transform = transforms.Compose([
         transforms.Resize(input_size),
-        transforms.Grayscale(3),
+        # transforms.Grayscale(3),
         transforms.ToTensor(),
         transforms.Normalize([0.5, 0.5, 0.5], [0.5, 0.5, 0.5])
     ])
     for image in Path('/media/linux/VOID/code/data/DoubleBag/eval_results/Manual').glob("*.jpg"):
         twobags.append(image.name)
+    rounds = len(list(data_dir.glob('*.jpg')))
+    counter = 0
     for image in data_dir.glob('*.jpg'):
-        predict_image(model_ft, image, output_dir, twobags, data_transform, class_name)
+        counter += 1
+        guessed_label, true_label = predict_image(model_ft, image, output_dir, twobags, data_transform, class_name)
+        print(str(counter) + "/" + str(rounds) + ":", str(guessed_label == true_label), " - guessed:", str(guessed_label),
+              "was:", true_label)

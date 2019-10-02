@@ -15,15 +15,25 @@ def process_all(ip, op, width, height, filter, bilateral):
         op.mkdir(parents=True)
     for element in ip.glob("*"):
         if element.is_dir():
-            process_all(Path(element), Path(op, element.name), width, height, filter, bilateral)
+            threading.Thread(target=process_all,
+                             args=(Path(element), Path(op, element.name), width, height, filter, bilateral)).start()
         elif element.suffix == ".jpg" or element.suffix == ".png":
-            img = cv2.imread(str(element))
-            # gray = gray_scale(img)
-            square_img = pad_to_square(img)
-            resized_img = resize(width, height, square_img)
-            # smooth_img = blur(resized_img, filter, bilateral)
-            cv2.imwrite(str(Path(op, element.name)), resized_img)
-            print("Writing", str(Path(op, element.name)))
+            process_img(bilateral, element, filter, height, op, width)
+
+
+def process_list(l, op, width, height, filter, bilateral):
+    for img_path in l:
+        process_img(bilateral, Path(img_path), filter, height, op, width)
+
+
+def process_img(bilateral, img_path, filter, height, op, width):
+    img = cv2.imread(str(img_path))
+    # gray = gray_scale(img)
+    square_img = pad_to_square(img)
+    resized_img = resize(width, height, square_img)
+    # smooth_img = blur(resized_img, filter, bilateral)
+    cv2.imwrite(str(Path(op, img_path.name)), resized_img)
+    print("Writing", str(Path(op, img_path.name)))
 
 
 def pad_to_square(img):
@@ -146,6 +156,10 @@ def compute_ratio(width, height, img):
     img_h, img_w = img.shape[:2]
 
 
+def chunker_list(seq, size):
+    return (seq[i::size] for i in range(size))
+
+
 def split_data(input_path, output_path, threads=4):
     rand_list = []
     for x in range(0, 250):
@@ -220,7 +234,7 @@ if __name__ == '__main__':
 
     if deligate:
         threading.Thread(target=process_all,
-                         args=(input_path, Path(output_path, "resized"), 224, 224, (25, 25), True)).start()
+                         args=(input_path, Path(output_path, "resized_color_50"), 224, 224, (50, 50), True)).start()
         # threading.Thread(target=process_all,
         #                  args=(input_path, Path(output_path, "blur_5_5"), 299, 299, (5, 5), False)).start()
         # threading.Thread(target=process_all,
@@ -241,8 +255,27 @@ if __name__ == '__main__':
         folder = Path(input_path, "train", "2bags")
         background_removal(folder)
     if test_process:
-        input_path = Path("/media/linux/VOID/code/data/DoubleBag/eval_data/test/")
+        input_path = Path("/media/linux/VOID/code/data/DoubleBag/eval_data/2bag_detect_1")
         output_path = Path("/media/linux/VOID/code/data/DoubleBag/eval_data/test_processed")
+        if not output_path.exists():
+            output_path.mkdir(parents=True)
 
-        threading.Thread(target=process_all,
-                         args=(input_path, Path(output_path, "resized"), 224, 224, (25, 25), True)).start()
+        name = "eval_resized_color"
+        if not Path(output_path, name).exists():
+            Path(output_path, name).mkdir(parents=True)
+
+        l = [str(img_path) for img_path in input_path.glob("*.jpg")]
+        seq = list(chunker_list(seq=l, size=4))
+        for i in range(4):
+            threading.Thread(target=process_list,
+                             args=(
+                                 seq[i], Path(output_path, name), 224, 224, (50, 50),
+                                 True)).start()
+
+
+def crop_to_size(img):
+    h, w = img.shape[:2]
+    crop_w = (w - 820) / 2
+    crop_h = (h - 720) / 2
+    cropped = img[math.ceil(crop_h):h - math.floor(crop_h), math.ceil(crop_w):w - math.floor(crop_w)]
+    return cropped

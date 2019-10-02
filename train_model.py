@@ -63,7 +63,9 @@ def train_model(model, dataloaders, criterion, optimizer, scheduler, class_names
     best_acc = best_accuracy
     last_saved_loss = loss
     last_saved_epoch = current_epoch
-
+    best_acc_train = best_accuracy
+    train_was_better = False
+    train_acc = best_accuracy
     for epoch in range(current_epoch, num_epochs):
         try:
             print('Epoch {}/{}'.format(epoch, num_epochs - 1))
@@ -73,6 +75,7 @@ def train_model(model, dataloaders, criterion, optimizer, scheduler, class_names
             for phase in ['train', 'val']:
                 if phase == 'train':
                     model.train()  # Set model to training mode
+                    train_was_better = False
                 else:
                     model.eval()  # Set model to evaluate mode
 
@@ -131,6 +134,9 @@ def train_model(model, dataloaders, criterion, optimizer, scheduler, class_names
 
                 epoch_loss = running_loss / len(dataloaders[phase].dataset)
                 epoch_acc = running_corrects.double() / len(dataloaders[phase].dataset)
+                if phase == 'train':
+                    train_acc = epoch_acc
+
 
                 print('{} Loss: {:.4f} Acc: {:.4f}'.format(phase, epoch_loss, epoch_acc))
 
@@ -140,8 +146,9 @@ def train_model(model, dataloaders, criterion, optimizer, scheduler, class_names
                 writer.add_scalar('LR/' + str(phase), optimizer.state_dict().get('param_groups')[0].get('lr'), epoch)
 
                 # deep copy the model
-                if phase == 'val' and epoch_acc > best_acc:
+                if phase == 'val' and epoch_acc >= best_acc: #and train_acc >= best_acc_train:
                     best_acc = epoch_acc
+                    best_acc_train = train_acc
                     best_model_wts = copy.deepcopy(model.state_dict())
                     best_optimizer_wts = copy.deepcopy(optimizer.state_dict())
                     last_saved_loss = epoch_loss

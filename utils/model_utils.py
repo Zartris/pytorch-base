@@ -1,26 +1,8 @@
 from __future__ import division
 from __future__ import print_function
 
-import argparse
-import copy
-import math
-import os
-import sys
-import time
-from pathlib import Path
-
-import matplotlib.pyplot as plt
-import numpy as np
-import pretrainedmodels
-import torch
 import torch.nn as nn
-import torch.nn.functional as F
-import torch.optim as optim
-import torchvision
 from cnn_finetune import make_model
-from cnn_finetune import utils
-from torch.optim import lr_scheduler
-from torch.utils.tensorboard import SummaryWriter
 from torchvision import datasets, models, transforms
 
 
@@ -51,7 +33,7 @@ def get_data_transform(model_name, input_size):
                 transforms.Resize(input_size),
                 # transforms.RandomResizedCrop(input_size, scale=(0.8, 1)),
                 # transforms.RandomErasing(p=0.2),
-                transforms.Grayscale(3),
+                # transforms.Grayscale(3),
                 transforms.RandomVerticalFlip(),
                 transforms.RandomHorizontalFlip(),
                 transforms.ToTensor(),
@@ -61,7 +43,7 @@ def get_data_transform(model_name, input_size):
             'val': transforms.Compose([
                 transforms.Resize(input_size),
                 # transforms.CenterCrop(input_size),
-                transforms.Grayscale(3),
+                # transforms.Grayscale(3),
                 transforms.ToTensor(),
                 # transforms.Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225]),
                 transforms.Normalize([0.5, 0.5, 0.5], [0.5, 0.5, 0.5])
