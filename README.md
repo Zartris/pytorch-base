@@ -1,4 +1,4 @@
-# pytorch-base
+# Pytorch-base
 This is my base for all future pytorch project.
 It contains a training class and a evaluation script.
 
