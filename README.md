@@ -1,5 +1,5 @@
 # Pytorch-base
-This is my base for all future pytorch supervised learning project.
+This is my base for all future pytorch **supervised learning** project.
 It contains a training class and a evaluation script.
 
 ### What is needed to run this:
